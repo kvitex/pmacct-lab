@@ -56,9 +56,23 @@ services:
     expose:
       - "8428"
     restart: always
+  clickhouse:
+    restart: always
+    image: yandex/clickhouse-server:${CLICKHOUSE_VERSION}
+    volumes:
+      - "clickhouse_data:/var/lib/clickhouse"
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+    ulimits:
+      nofile:
+        hard: 262144
+        soft: 262144
+
   grafana:
     container_name: grafana
-    restart: unless-stopped
+    restart: always
     environment:
       GF_SERVER_ROOT_URL: '${GRAFANA_ROOT_URL}'
       GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD}'
@@ -80,6 +94,14 @@ services:
     depends_on:
       - kafka
     env_file: pmacct-kafka-vm.env
+    expose:
+      - "9003"
+    restart: always
+  pmacct_kafka_clickhouse:
+    image: kvitex/pmacct-kafka-clickhouse
+    depends_on:
+      - kafka
+    env_file: pmacct-kafka-clickhouse.env
     expose:
       - "9003"
     restart: always
@@ -127,3 +149,4 @@ volumes:
   grafana_data:
   traefik_certs:
   vmdata:
+  clickhouse_data:
