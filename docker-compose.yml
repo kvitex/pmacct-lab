@@ -1,110 +1,5 @@
 version: '3.5'
 services:
-  kafka_ui:
-    image: obsidiandynamics/kafdrop:latest
-    environment:
-      KAFKA_BROKERCONNECT: kafka:9092
-    labels:
-      - "traefik.enable=true"
-      - "traefik.backend=kafka_ui"
-      - "traefik.port=9000"
-      - "traefik.frontend.rule=Host:${KAFKA_UI_HOST}"
-      - "traefik.frontend.auth.basic.users=${BASIC_AUTH}"
-    restart: always
-  zookeeper:
-    image: wurstmeister/zookeeper
-    expose:
-      - "2181"
-    restart: always
-  kafka:
-    image: wurstmeister/kafka
-    expose:
-      - "9092"
-    # ports:
-    #   - target: 9094
-    #     published: 9094
-    environment:
-      KAFKA_ADVERTISED_HOST_NAME: kafka
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092 
-      # KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://outside_address:9094
-      KAFKA_LISTENERS: INSIDE://:9092
-      # KAFKA_LISTENERS: INSIDE://:9092, OUTSIDE://:9094
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-      # KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT, OUTSIDE:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
-  sfacct:
-    restart: always
-    image: pmacct-sflow-kafka
-    volumes:
-      - "./sfacctd.conf:/etc/pmacct/sfacctd.conf"
-    ports:
-      - target: 6343
-        published: 6343
-        protocol: udp
-  victoria: 
-    restart: always
-    image: victoriametrics/victoria-metrics:${VM_VERSION}
-    volumes:
-      -  "vmdata:/victoria-metrics-data"
-    command:
-      - "-retentionPeriod" 
-      - "${VM_RETENTION}"
-    expose:
-      - "8428"
-    restart: always
-  clickhouse:
-    restart: always
-    image: yandex/clickhouse-server:${CLICKHOUSE_VERSION}
-    volumes:
-      - "clickhouse_data:/var/lib/clickhouse"
-    environment:
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
-      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
-    ulimits:
-      nofile:
-        hard: 262144
-        soft: 262144
-
-  grafana:
-    container_name: grafana
-    restart: always
-    environment:
-      GF_SERVER_ROOT_URL: '${GRAFANA_ROOT_URL}'
-      GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD}'
-      GF_AUTH_ANONYMOUS_ENABLED: 'false'
-      GF_AUTH_ANONYMOUS_ORG_NAME: 'Main'
-      GF_AUTH_ANONYMOUS_ROLE: 'Viewer'
-    image: grafana/grafana:${GRAFANA_VERSION}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.backend=grafana"
-      - "traefik.port=3000"
-      - "traefik.frontend.rule=Host:${GRAFANA_HOST}"
-    expose:
-      - "3000"
-    volumes:
-      - "grafana_data:/var/lib/grafana"
-  pmacct_kafka_vm:
-    image: kvitex/pmacct-kafka-vm
-    depends_on:
-      - kafka
-    env_file: pmacct-kafka-vm.env
-    expose:
-      - "9003"
-    restart: always
-  pmacct_kafka_clickhouse:
-    image: kvitex/pmacct-kafka-clickhouse
-    depends_on:
-      - kafka
-    env_file: pmacct-kafka-clickhouse.env
-    expose:
-      - "9003"
-    restart: always
   traefik:
     image: traefik:${TRAEFIK_VERSION}
     labels:
@@ -145,8 +40,153 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "traefik_certs:/etc/traefik/certs"
     restart: always
+  kafka_ui:
+    image: obsidiandynamics/kafdrop:latest
+    environment:
+      KAFKA_BROKERCONNECT: kafka:9092
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=kafka_ui"
+      - "traefik.port=9000"
+      - "traefik.frontend.rule=Host:${KAFKA_UI_HOST}"
+      - "traefik.frontend.auth.basic.users=${BASIC_AUTH}"
+    restart: always
+  zookeeper:
+    image: wurstmeister/zookeeper
+    expose:
+      - "2181"
+    restart: always
+  kafka:
+    image: wurstmeister/kafka
+    expose:
+      - "9092"
+    # ports:
+    #   - target: 9094
+    #     published: 9094
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092 
+      # KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://outside_address:9094
+      KAFKA_LISTENERS: INSIDE://:9092
+      # KAFKA_LISTENERS: INSIDE://:9092, OUTSIDE://:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+      # KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT, OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+  sfacct:
+    restart: always
+    image: kvitex/pmacct-docker-kafka
+    volumes:
+      - "./sfacctd.conf:/etc/pmacct/sfacctd.conf"
+    ports:
+      - target: 6343
+        published: 6343
+        protocol: udp
+  victoria: 
+    restart: always
+    image: victoriametrics/victoria-metrics:${VM_VERSION}
+    volumes:
+      -  "vmdata:/victoria-metrics-data"
+    command:
+      - "-retentionPeriod" 
+      - "${VM_RETENTION}"
+    expose:
+      - "8428"
+    restart: always
+  clickhouse:
+    restart: always
+    image: yandex/clickhouse-server:${CLICKHOUSE_VERSION}
+    volumes:
+      - "clickhouse_data:/var/lib/clickhouse"
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+    ulimits:
+      nofile:
+        hard: 262144
+        soft: 262144
+  grafana:
+    restart: always
+    environment:
+      GF_SERVER_ROOT_URL: '${GRAFANA_ROOT_URL}'
+      GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD}'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_AUTH_ANONYMOUS_ORG_NAME: 'Main'
+      GF_AUTH_ANONYMOUS_ROLE: 'Viewer'
+      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS}
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: ${GRAFANA_UNSIGNED_PLUGINS}
+    image: grafana/grafana:${GRAFANA_VERSION}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=grafana"
+      - "traefik.port=3000"
+      - "traefik.frontend.rule=Host:${GRAFANA_HOST}"
+    expose:
+      - "3000"
+    volumes:
+      - "grafana_data:/var/lib/grafana"
+  pmacct_kafka_vm:
+    image: kvitex/pmacct-kafka-vm
+    depends_on:
+      - kafka
+    expose:
+      - "9003"
+    restart: always
+    env_file: .env
+  pmacct_kafka_clickhouse:
+    image: kvitex/pmacct-kafka-clickhouse
+    depends_on:
+      - kafka
+      - clickhouse
+    expose:
+      - "9003"
+    env_file: .env
+    restart: always
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - "node.name=elastic"
+      - "cluster.name=elastic_cluster"
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m" 
+      - "bootstrap.memory_lock=true"
+      - "network_host=0.0.0.0"
+      - "network.publish_host=elastic"
+      - "discovery.type=single-node"
+    ulimits:
+      memlock: -1
+    expose:
+      - "9200"
+    volumes:
+      - "elastic_data:/usr/share/elasticsearch/data"
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${KIBANA_VERSION}
+    environment:
+      - "SERVER_NAME=kibana"
+      - "ELASTICSEARCH_HOSTS=http://elastic:9200"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=kibana"
+      - "traefik.port=5601"
+      - "traefik.frontend.rule=Host:${KIBANA_HOST}"
+      - "traefik.frontend.auth.basic.users=${BASIC_AUTH}"
+    expose:
+      - "5601"
+  pmacct_kafka_elastic:
+    image: kvitex/pmacct-kafka-elastic
+    depends_on:
+      - kafka
+      - elastic
+    expose:
+      - "9003"
+    env_file: .env
+    restart: always
 volumes:
   grafana_data:
   traefik_certs:
   vmdata:
   clickhouse_data:
+  elastic_data:
